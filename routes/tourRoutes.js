@@ -1,17 +1,19 @@
 const express = require('express');
 const fs = require('fs');
+
 const {
   getAllTours,
   createTour,
   getTour,
   updateTour,
   deleteTour,
-  checkId,
-  checkBody
+  aliasTopTours
+  // checkId,
+  // checkBody
 } = require('./../controllers/tourController');
-
 const router = express.Router();
 
+router.route('/top-5-cheap').get(aliasTopTours,getAllTours)
 // router.param('id', checkId);
 
 //create a check body middleware function
