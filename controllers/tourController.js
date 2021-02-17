@@ -1,5 +1,5 @@
 const Tour = require('./../models/tourModel');
-const APIFeatures = require('./../utils/apifeatures')
+const APIFeatures = require('./../utils/apifeatures');
 exports.aliasTopTours = (req, res, next) => {
   req.query.limit = '5';
   req.query.sort = '-ratingsAverage';
@@ -15,8 +15,6 @@ exports.aliasTopTours = (req, res, next) => {
 //   }
 //   next()
 // }
-
-
 
 exports.getAllTours = async (req, res) => {
   try {
@@ -120,3 +118,109 @@ exports.deleteTour = async (req, res) => {
     });
   }
 };
+
+exports.getTourStats = async (req, res) => {
+  try {
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingsAverage: { $gte: 4.5 } },
+      },
+      {
+        $group: {
+          _id: { $toUpper: '$difficulty' },
+          numTours: { $sum: 1 },
+          numRatings: { $sum: '$ratingsQuantity' },
+          avgRating: { $avg: '$ratingsAverage' },
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+        },
+      },
+      { $sort: { avgPrice: 1 } },
+      // {$match: {_id:{$ne: "EASY"}}}
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        stats,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      data: {
+        message: err,
+      },
+    });
+  }
+};
+
+exports.getMonthlyPlan = async(req,res)=> {
+  try{ 
+    //1 ниже для превращения в число
+    console.log("monthlyPlan")
+    const year = req.params.year*1
+    const plan = await Tour.aggregate([
+      {
+        $unwind: '$startDates'
+      },
+      //определяем тур, который бы отвечал требованиям по дате, в частности относился бы к 2021 году
+      {
+        $match: {
+          startDates: {
+            //указываем, что дата должна быть в течении 1 года
+            $gte:new Date(`${year}-06-01`),
+            $lte: new Date(`${year}-12-31`),
+
+          }
+        },
+        
+      },
+      {
+        $group: {
+          //группируем наши туры по месяцам, в каком месяце сколько туров
+          _id:{$month: '$startDates'},
+          numTourStarts: {$sum:1},
+          //добавляем в имеющиеся данные названия туров
+          tours: {$push: '$name'}
+        }
+      },
+      {
+        $addFields: {month: '$_id'}
+      },
+      {
+        $project: {
+          //теперь скрываем Id
+          _id:0
+        }
+        
+      },
+      {
+        //сортировка по убыванию
+        $sort: {
+          numTourStarts:-1
+        }
+      },
+      {
+        //ограничение на показ туров
+        $limit: 12
+      }
+        
+  ]);
+    res.status(200).json({
+      status: 'success',
+      data: {
+        plan
+      },
+    });
+  }
+  catch(err) {
+    res.status(400).json({
+      status: 'fail',
+      data: {
+        message: err,
+      },
+    });
+  }
+}
