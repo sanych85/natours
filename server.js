@@ -3,6 +3,13 @@ const dotenv = require('dotenv');
 dotenv.config({ path: './config.env' });
 const app = require('./app');
 
+process.on('uncaughtException', err=> {
+  
+  console.log(err.name,  ` nameError: ${err.message}`)
+  console.log("UNCAUGHT EXCEPTIONS")
+    process.exit(1)
+
+})
 
 //подменяем пароль нашей переменной в файле config.env
 const DB = process.env.DATABASE.replace(
@@ -17,26 +24,24 @@ mongoose
   })
   .then((con) => {
     console.log('DB CONNECTION SUcces');
-  });
+  }).catch(err=>console.log("Error"));
 
-
-// //создаем тур, передаем название и схему по которой он будет создан
-// const Tour = mongoose.model('Tour', tourSchema)
-// const testTour = new Tour({
-//   name: "park camper",
-//   rating:4.7,
-//   price:497
-// })
-// testTour.save().then(doc=>{
-//   console.log(doc)
-// }).catch(err=>{
-//   console.log("Error",err)
-// })
 
 // const port = process.env.PORT || 3000;
 const port = 3000;
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`App running on port ${port}`);
 });
+
+process.on('unhandledRejection', err=> {
+  console.log(err.name, err.message)
+  console.log("UNHANDLER REJECTION")
+  
+  server.close(()=> {
+    process.exit(1)
+  })
+})
+
+
 
 //TEST
