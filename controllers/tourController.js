@@ -2,6 +2,8 @@ const Tour = require('./../models/tourModel');
 const APIFeatures = require('./../utils/apifeatures');
 const catchAssync = require('./../utils/catchAssync');
 const appError = require('./../utils/appError');
+const factory = require('./handlerFactory')
+
 exports.aliasTopTours = (req, res, next) => {
   req.query.limit = '5';
   req.query.sort = '-ratingsAverage';
@@ -38,8 +40,9 @@ exports.getAllTours = catchAssync(async (req, res,next) => {
 });
 
 exports.getTour = catchAssync(async (req, res,next) => {
-  const tour = await Tour.findById(req.params.id);
-  // console.log(tour);
+  //populate используем чтобы в наших турах была ссылка на юзеров, относящихся к данным турам и чтобы она была как бы встраиваемой. В данном случае это ссылка на поле "guides"
+  const tour = await Tour.findById(req.params.id).populate('reviews')
+ 
   if(!tour) {
     return next(new appError('No tour found with that id', 404))
   }
@@ -77,16 +80,19 @@ exports.updateTour = catchAssync(async (req, res,next) => {
   });
 });
 
-exports.deleteTour = catchAssync(async (req, res,next) => {
-  const tour = await Tour.findByIdAndDelete(req.params.id);
-  if(!tour) {
-    return next(new appError('No tour found with that id', 404))
-  }
-  res.status(204).json({
-    status: 'success',
-    data: null,
-  });
-});
+// exports.deleteTour = catchAssync(async (req, res,next) => {
+//   const tour = await Tour.findByIdAndDelete(req.params.id);
+//   if(!tour) {
+//     return next(new appError('No tour found with that id', 404))
+//   }
+//   res.status(204).json({
+//     status: 'success',
+//     data: null,
+//   });
+// });
+console.log(factory)
+console.log(Tour)
+exports.deleteTour = factory.deleteOne(Tour)
 
 exports.getTourStats = catchAssync(async (req, res,next) => {
   const stats = await Tour.aggregate([
@@ -118,7 +124,7 @@ exports.getTourStats = catchAssync(async (req, res,next) => {
 
 exports.getMonthlyPlan = catchAssync(async (req, res,next) => {
   //1 ниже для превращения в число
-  console.log('monthlyPlan');
+  
   const year = req.params.year * 1;
   const plan = await Tour.aggregate([
     {

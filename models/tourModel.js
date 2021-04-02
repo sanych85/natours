@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
-const valiadator = require('validator')
+const valiadator = require('validator');
+// const User = require('./userModel');
 const tourSchema = new mongoose.Schema(
   {
     name: {
@@ -11,7 +12,6 @@ const tourSchema = new mongoose.Schema(
       maxLength: [40, 'A tour name must have less or equal 40 charact'],
       minLength: [10, 'A tour name must have more or equal 10 charact'],
       // validate:[valiadator.isAlpha, "Tour name must only contain characters"]
-
     },
     slug: String,
     duration: {
@@ -26,10 +26,10 @@ const tourSchema = new mongoose.Schema(
       type: String,
       requred: [true, 'tour must have difficulty'],
       enum: {
-        values:['easy', 'medium', 'difficult'],
-        message: "Difficulty is either: easy, medium,difficult"
+        values: ['easy', 'medium', 'difficult'],
+        message: 'Difficulty is either: easy, medium,difficult',
       },
-      }, 
+    },
     rating: {
       type: Number,
       default: 4.5,
@@ -49,14 +49,14 @@ const tourSchema = new mongoose.Schema(
       required: [true, 'A tour must have a price'],
     },
     priceDiscount: {
-      type:Number,
+      type: Number,
       validate: {
-        message: "discount price ({VALUE}) should be lower than regular price",
-        validator:function(val){
+        message: 'discount price ({VALUE}) should be lower than regular price',
+        validator: function (val) {
           //Это возможно только если мы создаем новый документ, а не апдейтим старый. Проблема в this
-          return val <this.price
-        }
-      } 
+          return val < this.price;
+        },
+      },
     },
     summary: {
       type: String,
@@ -81,17 +81,60 @@ const tourSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    startLocation: {
+      //GeoJSON
+      type: {
+        type: String,
+        default: 'Point',
+        //enum'ом задаем все возможные значения, которые могут быть
+        enum: ['Point'],
+      },
+      // ожидаем получить массив чисел.
+      coordianates: [Number],
+      adress: String,
+      description: String,
+    },
+    locations: [
+      {
+        type: {
+          type: String,
+          default: 'Point',
+          enum: ['Point'],
+        },
+        coordianates: [Number],
+        adress: String,
+        description: String,
+        day: Number,
+      },
+    ],
+    guides: [{ type: mongoose.Schema.ObjectId, ref: 'User' }],
   },
+
   {
     //каждый раз когда мы трансформируем наш объект в JSON формат виртуальные опции делаем доступными
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    // toJSON: { virtuals: true },
+    // toObject: { virtuals: true},
   }
 );
+
+tourSchema.set('toObject', { virtuals: true });
+tourSchema.set('toJSON', { virtuals: true });
 
 tourSchema.virtual('durationWeeks').get(function () {
   return this.duration / 7;
 });
+tourSchema.virtual('newDuration').get(function () {
+  return this.duration / 7;
+});
+
+tourSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'tour',
+  localField: '_id',
+});
+
+//virtual populate.
+//В данном случае мы коннектим id нашего тура с полем tours , которые есть в Review
 
 // ---------DOC MIDDLEWARE---------------
 //documents middleware runs before save() and create() not update
@@ -100,6 +143,16 @@ tourSchema.pre('save', function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
+
+//Это схема используется как embedding, встраивание
+// tourSchema.pre('save', async function (next) {
+//   //здесь получим массив промисов
+//   const guidesPromises = this.guides.map(async (id) => await User.findById(id));
+
+//   //теперь сразу пытаемся резолвнуть эти промисы
+//   this.guides = await Promise.all(guidesPromises);
+//   next();
+// });
 
 // tourSchema.pre('save', function(next){
 //   console.log('will save document');
@@ -121,18 +174,27 @@ tourSchema.pre(/^find/, function (next) {
   next();
 });
 
+tourSchema.pre(/^find/, function (next) {
+  this.populate({
+    path: 'guides',
+    //не включаем ниже приведенные поля в вывод
+    select: '-__v-passwordChangeAt',
+  });
+  next();
+});
+
 // post запускается после завершения query
 tourSchema.post(/^find/, function (docs, next) {
   // tourSchema.pre('find', function(next){
 
-  console.log(`Query took ${Date.now() - this.start}`);
+  
 
   next();
 });
 
 // ---------AGGREGATION MIDDDLEWARE---------
 tourSchema.pre('aggregate', function (next) {
-  console.log(this.pipeline());
+
   //исключаем секретные туры при аггрегации
   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
   next();

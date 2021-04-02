@@ -5,11 +5,11 @@ const message = `Invalid ${err.path}: ${err.value}`
 return new AppError(message, 400)
 }
 const handleDuplicateFieldsDB =(err)=> {
-  console.log(err)
+
   const value = err.keyValue.name
   // const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0]
   const message = `Duplicate fileld value: ${value}. Please use another value!`
-  console.log(message)
+
   return new AppError(message,400)
 }
 
@@ -17,6 +17,13 @@ const handleValidationErrorDB = (err)=> {
   const errors  = Object.values(err.errors).map(val=> val.message)
   const message  = `Invalid input data. ${errors.join('.')}`
   return new AppError(message, 400)
+}
+const handleJWTError = ()=> {
+ return new AppError('Invalid tokin. Please log in again', 401) 
+}
+
+const handleJWTExpiredError = ()=> {
+  return new AppError('your token is expired! Please log again', 401)
 }
 
 const sendErrorDev = (err, res) => {
@@ -38,7 +45,7 @@ const sendErrorProd = (err, res) => {
   //Programming or other unknown error dont leak error details
   else {
     //1) Log error
-    console.error("ERROR", err)
+   
     // 2_ send generic message
 
     res.status(500).json({
@@ -51,7 +58,7 @@ module.exports = (err, req, res, next) => {
   
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
-  console.log(process.env.NODE_ENV)
+ 
   if (process.env.NODE_ENV === 'development') {
     sendErrorDev(err, res);
   } else if (process.env.NODE_ENV === 'production') {
@@ -64,12 +71,14 @@ module.exports = (err, req, res, next) => {
     
     // обработка ошибок для дублирования кода в mongoose
     if(error.code ===11000) {
-      console.log(error.code);
+    
       error = handleDuplicateFieldsDB(error)
     }
     if(error.name==="ValidationError") {
       error = handleValidationErrorDB(error)
-    } 
+    }
+    if(error.name === "JsonWebTokenError")error = handleJWTError()
+    if(error.name==="TokenExpiredError")error = handleJWTExpiredError();
     sendErrorProd(error, res);
   }
 };

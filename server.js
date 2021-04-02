@@ -5,8 +5,7 @@ const app = require('./app');
 
 process.on('uncaughtException', err=> {
   
-  console.log(err.name,  ` nameError: ${err.message}`)
-  console.log("UNCAUGHT EXCEPTIONS")
+
     process.exit(1)
 
 })
@@ -24,18 +23,17 @@ mongoose
   })
   .then((con) => {
     console.log('DB CONNECTION SUcces');
-  }).catch(err=>console.log("Error"));
+  }).catch(err=>console.log(" server something Error" , err));
 
 
 // const port = process.env.PORT || 3000;
 const port = 3000;
 const server = app.listen(port, () => {
-  console.log(`App running on port ${port}`);
+
 });
 
 process.on('unhandledRejection', err=> {
-  console.log(err.name, err.message)
-  console.log("UNHANDLER REJECTION")
+
   
   server.close(()=> {
     process.exit(1)
