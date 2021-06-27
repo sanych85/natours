@@ -13,6 +13,7 @@ const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/rewiewRoutes')
 const bookingRouter = require('./routes/bookingRoutes')
+//start express app
 const app = express();
 const viewRouter = require('./routes/viewRoutes')
 
