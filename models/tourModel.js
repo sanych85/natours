@@ -39,6 +39,7 @@ const tourSchema = new mongoose.Schema(
       default: 4.5,
       min: [1, 'rating must be above 1.0'],
       max: [5, 'rating must be below 5.0'],
+      set: (val) => Math.round(val * 10), // Округляем значнения
     },
     ratingsQuantity: {
       type: Number,
@@ -90,7 +91,7 @@ const tourSchema = new mongoose.Schema(
         enum: ['Point'],
       },
       // ожидаем получить массив чисел.
-      coordianates: [Number],
+      coordinates: [Number],
       adress: String,
       description: String,
     },
@@ -101,21 +102,24 @@ const tourSchema = new mongoose.Schema(
           default: 'Point',
           enum: ['Point'],
         },
-        coordianates: [Number],
+        coordinates: [Number],
         adress: String,
         description: String,
         day: Number,
       },
     ],
     guides: [{ type: mongoose.Schema.ObjectId, ref: 'User' }],
-  },
-
-  {
-    //каждый раз когда мы трансформируем наш объект в JSON формат виртуальные опции делаем доступными
-    // toJSON: { virtuals: true },
-    // toObject: { virtuals: true},
   }
+
+  //каждый раз когда мы трансформируем наш объект в JSON формат виртуальные опции делаем доступными
+  // toJSON: { virtuals: true },
+  // toObject: { virtuals: true},
 );
+
+//использование indexes (улучшение производительности)
+// tourSchema.index({ price: 1, ratingsAverage: -1 });
+// tourSchema.index({ slug: 1 });
+// tourSchema.index({ startLocation: '2dsphere' });
 
 tourSchema.set('toObject', { virtuals: true });
 tourSchema.set('toJSON', { virtuals: true });
@@ -187,18 +191,15 @@ tourSchema.pre(/^find/, function (next) {
 tourSchema.post(/^find/, function (docs, next) {
   // tourSchema.pre('find', function(next){
 
-  
-
   next();
 });
 
 // ---------AGGREGATION MIDDDLEWARE---------
-tourSchema.pre('aggregate', function (next) {
-
-  //исключаем секретные туры при аггрегации
-  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-  next();
-});
+// tourSchema.pre('aggregate', function (next) {
+//   //исключаем секретные туры при аггрегации
+//   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+//   next();
+// });
 
 const Tour = mongoose.model('Tour', tourSchema);
 module.exports = Tour;

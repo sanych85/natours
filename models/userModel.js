@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
         lowercase: true,
         validate: [valiadator.isEmail, "Please provide valid email"]
     },
-    photo: String,
+    photo: {type: String, default:'default.jpg'},
     role: {
         type: String,
         enum:['user', 'guide', 'lead-guide', 'admin'],
@@ -49,27 +49,39 @@ const userSchema = new mongoose.Schema({
 })
 
 userSchema.pre('save', async function(next) {
+    // Only run this function if password was actually modified
+    if (!this.isModified('password')) return next();
+  
+    // Hash the password with cost of 12
+    this.password = await bcrypt.hash(this.password, 12);
+  
+    // Delete passwordConfirm field
+    this.passwordConfirm = undefined;
+    next();
+  });
 
-    // криптуем только если пароль находимся  в состоянии модификации
-    if(!this.isModified('password')) return next()
+// userSchema.pre('save', async function(next) {
 
-    // хешируем пароль со значением 12
-    this.password = await bcrypt.hash(this.password,12)
+//     // криптуем только если пароль находимся  в состоянии модификации
+//     if(!this.isModified('password')) return next()
 
-    //delete passwordCOnfirm field
-    this.passwordConfirm = undefined
-    next()
+//     // хешируем пароль со значением 12
+//     this.password = await bcrypt.hash(this.password,12)
 
-})
+//     //delete passwordCOnfirm field
+//     this.passwordConfirm = undefined
+//     next()
 
-//функция pre запустится перед тем как новый документ будет сохранен
-userSchema.pre('save', function(next){
+// })
+
+// //функция pre запустится перед тем как новый документ будет сохранен
+// userSchema.pre('save', function(next){
    
-    //если у нас не модифицируемый документ или если он он новый, то мы пропускаем шаг
-    if(!this.isModified('password')|| this.isNew)return next()
-    this.passwordChangedAt = Date.now()-1000
-    next()
-})
+//     //если у нас не модифицируемый документ или если он он новый, то мы пропускаем шаг
+//     if(!this.isModified('password')|| this.isNew)return next()
+//     this.passwordChangedAt = Date.now()-1000
+//     next()
+// })
 
 //ниже ищем все запросы ,которые начинаются с find
 //this points current query/ Находим все значения, где active не стоит в значении false.
